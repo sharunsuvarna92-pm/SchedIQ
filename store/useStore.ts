@@ -4,6 +4,8 @@ import { AppState, Team, TeamMember, Module, Task, Assignment } from '../types';
 
 const STORAGE_KEY = 'schediq_resource_manager_data';
 const CACHE_KEY = 'schediq_analysis_cache';
+
+// Reverting to absolute URL because the frontend and backend are hosted on different Vercel projects.
 const BASE_URL = 'https://resource-manager-zeta.vercel.app/api';
 
 const TEAMS_API = `${BASE_URL}/teams`;
@@ -273,7 +275,7 @@ export const useStore = () => {
   }, [safeFetch]);
 
   const commitTask = useCallback(async (taskId: string, commitPayload: { plan: any; force?: boolean }) => {
-    // Send force flag within the body JSON as requested
+    // Strictly adhering to the requested signature: POST to /commit with JSON body { plan, force }
     await safeFetch(getTaskUrl(`${taskId}/commit`), {
       method: 'POST',
       body: JSON.stringify({

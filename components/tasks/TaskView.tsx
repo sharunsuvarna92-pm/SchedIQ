@@ -462,4 +462,29 @@ const TaskView: React.FC<TaskViewProps> = ({ tasks = [], modules = [], teams = [
               <div className="col-span-full flex justify-end space-x-4 pt-6 border-t dark:border-[#333C4B] sticky bottom-0 bg-white dark:bg-[#1D2125]">
                 <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 text-sm font-bold text-[#42526E] hover:bg-gray-100 dark:hover:bg-white/5 rounded-md transition-all">Cancel</button>
                 <button type="submit" disabled={isSubmitting} className="px-10 py-2.5 bg-[#0052CC] text-white rounded-md font-bold text-sm shadow-xl hover:shadow-blue-500/30 hover:bg-[#0747A6] transition-all disabled:opacity-50 active:scale-95 flex items-center space-x-2">
-                  {isSubmitting ? <Loader2 className="animate-spin"
+                  {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                  <span>{isSubmitting ? 'Syncing Schema...' : (editingTask ? 'Apply Changes' : 'Initialize Task')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {selectedTaskForAnalysis && (
+        <TaskAnalysis 
+          task={selectedTaskForAnalysis} 
+          members={members} 
+          onClose={() => setSelectedTaskForAnalysis(null)}
+          onEdit={() => {
+            const t = selectedTaskForAnalysis;
+            setSelectedTaskForAnalysis(null);
+            handleOpenEdit(t);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default TaskView;
