@@ -5,17 +5,13 @@ import { AppState, Team, TeamMember, Module, Task, Assignment } from '../types';
 const STORAGE_KEY = 'schediq_resource_manager_data';
 const CACHE_KEY = 'schediq_analysis_cache';
 
-// Reverting to absolute URL because the frontend and backend are hosted on different Vercel projects.
+// Hardcoded absolute URL for cross-project connectivity
 const BASE_URL = 'https://resource-manager-zeta.vercel.app/api';
 
 const TEAMS_API = `${BASE_URL}/teams`;
 const MEMBERS_API = `${BASE_URL}/team-members`;
 const MODULES_API = `${BASE_URL}/modules`;
 
-/**
- * Strips 'id', 'created_at', and other metadata that might cause 400/500 errors 
- * when sent to strict API endpoints (PostgREST/Supabase).
- */
 const sanitizePayload = (obj: any) => {
   if (!obj || typeof obj !== 'object') return obj;
   const clean = { ...obj };
@@ -25,24 +21,18 @@ const sanitizePayload = (obj: any) => {
   return JSON.parse(JSON.stringify(clean));
 };
 
-/**
- * Prepares the module payload for the backend.
- */
 const prepareModulePayload = (module: any) => {
   const rawOwners = module.owners || module.module_owners || [];
-  
   const cleanOwners = rawOwners.map((o: any) => ({
     team_id: String(o.team_id),
     member_id: String(o.member_id),
     role: o.role
   }));
-
   const payload = {
     name: module.name,
     description: module.description,
     module_owners: cleanOwners
   };
-
   return sanitizePayload(payload);
 };
 
@@ -85,14 +75,10 @@ const listeners = new Set<(data: AppState, cache: Record<string, any>) => void>(
 const updateGlobalState = (newData: Partial<AppState>, newCache?: Record<string, any>) => {
   globalData = { ...globalData, ...newData };
   if (newCache) globalAnalysisCache = { ...globalAnalysisCache, ...newCache };
-  
   localStorage.setItem(STORAGE_KEY, JSON.stringify(globalData));
   localStorage.setItem(CACHE_KEY, JSON.stringify(globalAnalysisCache));
-  
   listeners.forEach(l => l(globalData, globalAnalysisCache));
 };
-
-const MAX_RETRIES = 1;
 
 export const useStore = () => {
   const [data, setData] = useState<AppState>(globalData);
@@ -108,7 +94,6 @@ export const useStore = () => {
       setAnalysisCache({ ...c });
     };
     listeners.add(listener);
-    setData({ ...globalData });
     return () => { listeners.delete(listener); };
   }, []);
 
@@ -121,31 +106,27 @@ export const useStore = () => {
         headers['Content-Type'] = 'application/json';
       }
 
+      console.debug(`[SchedIQ] Fetching: ${options.method || 'GET'} ${url}`);
+
       const response = await fetch(url, {
         ...options,
         headers: { ...headers, ...(options.headers as Record<string, string>) },
+        mode: 'cors', // Explicitly enable CORS
       });
 
       if (!response.ok) {
         let errorMsg = `Server ${response.status}: ${response.statusText}`;
         try {
           const body = await response.json();
-          if (body.error || body.message || body.supabase_error?.message) {
-            errorMsg = body.error || body.message || body.supabase_error?.message || body.supabase_error?.hint || errorMsg;
-          }
-        } catch { /* fallback to default */ }
+          errorMsg = body.error || body.message || body.supabase_error?.message || errorMsg;
+        } catch { }
         throw new Error(errorMsg);
       }
 
-      try {
-        return await response.json();
-      } catch {
-        return null;
-      }
+      return await response.json();
     } catch (err: any) {
-      if (retryCount < MAX_RETRIES) {
-        return safeFetch(url, options, retryCount + 1);
-      }
+      console.error(`[SchedIQ] Fetch Error (${url}):`, err.message);
+      if (retryCount < 1) return safeFetch(url, options, retryCount + 1);
       throw err;
     }
   }, []);
@@ -214,17 +195,11 @@ export const useStore = () => {
     try {
       const result = await safeFetch(getTaskUrl());
       let tasksArray = [];
-      if (Array.isArray(result)) {
-        tasksArray = result;
-      } else if (result?.tasks && Array.isArray(result.tasks)) {
-        tasksArray = result.tasks;
-      } else if (result?.data) {
-        if (Array.isArray(result.data)) {
-          tasksArray = result.data;
-        } else if (result.data.tasks && Array.isArray(result.data.tasks)) {
-          tasksArray = result.data.tasks;
-        }
-      }
+      if (Array.isArray(result)) tasksArray = result;
+      else if (result?.tasks) tasksArray = result.tasks;
+      else if (result?.data?.tasks) tasksArray = result.data.tasks;
+      else if (result?.data) tasksArray = result.data;
+      
       updateGlobalState({ tasks: [...tasksArray] });
       setLastError(null);
     } catch (err: any) {
@@ -245,26 +220,17 @@ export const useStore = () => {
   }, [fetchTeams, fetchMembers, fetchModules, fetchTasks]);
 
   const addTask = useCallback(async (task: Omit<Task, 'id' | 'created_at'>) => {
-    await safeFetch(getTaskUrl(), {
-      method: 'POST',
-      body: JSON.stringify(sanitizePayload(task)),
-    });
+    await safeFetch(getTaskUrl(), { method: 'POST', body: JSON.stringify(sanitizePayload(task)) });
     await fetchTasks();
   }, [safeFetch, fetchTasks]);
 
   const updateTask = useCallback(async (taskId: string, updates: Partial<Task>) => {
-    await safeFetch(getTaskUrl(taskId), {
-      method: 'PATCH',
-      body: JSON.stringify(sanitizePayload(updates)),
-    });
+    await safeFetch(getTaskUrl(taskId), { method: 'PATCH', body: JSON.stringify(sanitizePayload(updates)) });
     await fetchTasks();
   }, [safeFetch, fetchTasks]);
 
   const updateTaskStatus = useCallback(async (taskId: string, status: string) => {
-    await safeFetch(getTaskUrl(`${taskId}/status`), {
-      method: 'PATCH',
-      body: JSON.stringify({ status: status.toUpperCase() }),
-    });
+    await safeFetch(getTaskUrl(`${taskId}/status`), { method: 'PATCH', body: JSON.stringify({ status: status.toUpperCase() }) });
     await fetchTasks();
   }, [safeFetch, fetchTasks]);
 
@@ -275,7 +241,6 @@ export const useStore = () => {
   }, [safeFetch]);
 
   const commitTask = useCallback(async (taskId: string, commitPayload: { plan: any; force?: boolean }) => {
-    // Strictly adhering to the requested signature: POST to /commit with JSON body { plan, force }
     await safeFetch(getTaskUrl(`${taskId}/commit`), {
       method: 'POST',
       body: JSON.stringify({
@@ -302,15 +267,9 @@ export const useStore = () => {
     fetchModules,
     fetchTasks,
     addTeam: (t: any) => safeFetch(TEAMS_API, { method: 'POST', body: JSON.stringify(sanitizePayload(t)) }).then(fetchTeams),
-    updateTeam: (id: string, t: any) => safeFetch(`${TEAMS_API}/${id}`, { 
-      method: 'PUT', 
-      body: JSON.stringify({ ...sanitizePayload(t), id }) 
-    }).then(fetchTeams),
+    updateTeam: (id: string, t: any) => safeFetch(`${TEAMS_API}/${id}`, { method: 'PUT', body: JSON.stringify({ ...sanitizePayload(t), id }) }).then(fetchTeams),
     addMember: (m: any) => safeFetch(MEMBERS_API, { method: 'POST', body: JSON.stringify(sanitizePayload(m)) }).then(fetchMembers),
-    updateMember: (id: string, m: any) => safeFetch(`${MEMBERS_API}/${id}`, { 
-      method: 'PUT', 
-      body: JSON.stringify({ ...sanitizePayload(m), id }) 
-    }).then(fetchMembers),
+    updateMember: (id: string, m: any) => safeFetch(`${MEMBERS_API}/${id}`, { method: 'PUT', body: JSON.stringify({ ...sanitizePayload(m), id }) }).then(fetchMembers),
     addModule: (m: any) => safeFetch(MODULES_API, { method: 'POST', body: JSON.stringify(prepareModulePayload(m)) }).then(fetchModules),
     updateModule: (id: string, m: any) => safeFetch(`${MODULES_API}/${id}`, { method: 'PATCH', body: JSON.stringify(prepareModulePayload(m)) }).then(fetchModules),
   };

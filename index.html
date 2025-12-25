@@ -9,7 +9,13 @@
     <script>
       tailwind.config = {
         darkMode: 'class',
-      }
+      };
+      // Shim process.env for browser compatibility as required by Google GenAI guidelines
+      window.process = {
+        env: {
+          API_KEY: '' // Will be injected by the environment
+        }
+      };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -34,5 +40,6 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-[#0D1117] dark:text-[#E2E8F0]">
     <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>
