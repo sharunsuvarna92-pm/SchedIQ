@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Team, TeamMember } from '../../types';
-import { Plus, Search, Filter, MoreHorizontal, Star, Loader2, Edit2, X, Save, Globe, Clock, Briefcase } from 'lucide-react';
+import { Plus, Search, Loader2, Edit2, X, Save, Globe, Clock, User } from 'lucide-react';
 
 interface MemberViewProps {
   members: TeamMember[];
@@ -56,172 +56,127 @@ const MemberView: React.FC<MemberViewProps> = ({ members, teams, onAddMember, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.team_id) { alert("Please assign a team cluster."); return; }
+    if (!formData.team_id) return;
     setIsSubmitting(true);
     try {
       if (editingMember) await onUpdateMember(editingMember.id, formData);
       else await onAddMember(formData as Omit<TeamMember, 'id' | 'created_at'>);
       setShowForm(false);
-    } catch (err) { alert("Recruitment failure. Check parameters."); } finally { setIsSubmitting(false); }
+    } finally { setIsSubmitting(false); }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B778C] dark:text-[#B3BAC5]" size={16} />
+    <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
-            placeholder="Search by name, email, or skill..." 
+            placeholder="Search personnel..." 
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-[#1D2125] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] focus:border-[#0052CC] outline-none transition-all" 
+            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#0F172A] border border-slate-200/60 dark:border-slate-800/60 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all card-shadow" 
           />
         </div>
-        <button onClick={handleOpenForm} className="bg-[#0052CC] text-white px-4 py-2 rounded font-bold text-sm hover:bg-[#0747A6] flex items-center space-x-2 shadow-sm transition-colors">
-          <Plus size={16} />
-          <span>Onboard Person</span>
+        <button onClick={handleOpenForm} className="w-full sm:w-auto bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold text-sm shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all">
+          Onboard Personnel
         </button>
       </div>
 
-      <div className="bg-white dark:bg-[#1D2125] border border-[#DFE1E6] dark:border-[#333C4B] rounded overflow-hidden shadow-sm transition-colors">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-[#F4F5F7] dark:bg-[#161B22] border-b border-[#DFE1E6] dark:border-[#333C4B] transition-colors">
-              <th className="px-6 py-3 text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Associate</th>
-              <th className="px-6 py-3 text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Level</th>
-              <th className="px-6 py-3 text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Skill Grid</th>
-              <th className="px-6 py-3 text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider text-center">Load Cap</th>
-              <th className="px-6 py-3 text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#F4F5F7] dark:divide-[#333C4B]">
-            {filteredMembers.map(member => (
-              <tr key={member.id} className="hover:bg-[#F4F5F7]/40 dark:hover:bg-[#333C4B]/20 group transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-9 w-9 bg-[#172B4D] dark:bg-[#0052CC] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">{member.name ? member.name[0] : '?'}</div>
-                    <div>
-                      <div className="text-sm font-bold text-[#172B4D] dark:text-[#E2E8F0] group-hover:text-[#0052CC] transition-colors">{member.name}</div>
-                      <div className="text-[11px] text-[#6B778C] dark:text-[#B3BAC5] font-medium">{member.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${member.experience_level === 'Lead' ? 'bg-[#172B4D] dark:bg-[#0052CC] text-white' : 'bg-[#EBECF0] dark:bg-[#333C4B] text-[#42526E] dark:text-[#E2E8F0]'}`}>{member.experience_level}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1 max-w-[260px]">
-                    {member.skill_sets?.slice(0, 3).map(skill => (
-                      <span key={skill} className="text-[10px] font-bold text-[#0052CC] dark:text-white bg-[#DEEBFF] dark:bg-[#0747A6] px-1.5 py-0.5 rounded transition-colors">{skill}</span>
-                    ))}
-                    {member.skill_sets?.length > 3 && <span className="text-[10px] text-[#6B778C] dark:text-[#B3BAC5] font-bold">+{member.skill_sets.length - 3}</span>}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs font-bold text-[#172B4D] dark:text-[#E2E8F0]">{member.capacity_hours_per_week}h</span>
-                    <span className="text-[9px] text-[#6B778C] dark:text-[#B3BAC5] font-bold uppercase">/ week</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${member.is_active ? 'bg-[#36B37E]' : 'bg-[#6B778C] dark:bg-[#42526E]'}`}></div>
-                    <span className="text-xs font-semibold text-[#42526E] dark:text-[#B3BAC5]">{member.is_active ? 'Active' : 'Offline'}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => handleOpenEdit(member)} className="p-2 text-[#6B778C] dark:text-[#B3BAC5] hover:text-[#0052CC] hover:bg-[#DEEBFF] dark:hover:bg-[#333C4B] rounded transition-all"><Edit2 size={14} /></button>
-                </td>
+      <div className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200/60 dark:border-slate-800/60 overflow-hidden card-shadow">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left min-w-[800px]">
+            <thead>
+              <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Resource</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Rank</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Skills</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Load</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredMembers.map(member => (
+                <tr key={member.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                  <td className="px-8 py-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-lg shadow-indigo-500/10">{member.name[0]}</div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-900 dark:text-white">{member.name}</div>
+                        <div className="text-xs text-slate-400 font-medium">{member.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border ${member.experience_level === 'Lead' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent'}`}>
+                      {member.experience_level}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                      {member.skill_sets?.slice(0, 2).map(skill => (
+                        <span key={skill} className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">{skill}</span>
+                      ))}
+                      {member.skill_sets?.length > 2 && <span className="text-[10px] text-slate-400 font-bold">+{member.skill_sets.length - 2}</span>}
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <span className="text-sm font-black text-slate-900 dark:text-white">{member.capacity_hours_per_week}h</span>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <button onClick={() => handleOpenEdit(member)} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-all"><Edit2 size={16} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-[#091E42]/60 dark:bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1D2125] rounded-lg shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] border dark:border-[#333C4B] overflow-hidden">
-            <div className="p-5 border-b border-[#DFE1E6] dark:border-[#333C4B] flex justify-between items-center bg-[#F4F5F7] dark:bg-[#161B22]">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 lg:p-6 overflow-y-auto">
+          <div className="bg-white dark:bg-[#0F172A] rounded-[32px] lg:rounded-[40px] shadow-2xl w-full max-w-2xl flex flex-col my-auto border border-slate-200/60 dark:border-slate-800/60 animate-in zoom-in-95">
+            <div className="p-6 lg:p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-[#172B4D] dark:text-[#E2E8F0]">{editingMember ? 'Update Resource Profile' : 'Onboard New Associate'}</h2>
-                <p className="text-xs text-[#6B778C] dark:text-[#B3BAC5] mt-0.5 font-semibold">Define skills, capacity, and operational parameters.</p>
+                <h2 className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white">Resource Profile</h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Personnel Allocation Parameters</p>
               </div>
-              <button onClick={() => setShowForm(false)} className="text-[#6B778C] dark:text-[#B3BAC5] hover:text-[#172B4D] dark:hover:text-white p-1 hover:bg-white dark:hover:bg-[#333C4B] rounded-full transition-all"><X size={20} /></button>
+              <button onClick={() => setShowForm(false)} className="hover:bg-slate-100 dark:hover:bg-slate-800 p-3 rounded-2xl"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto custom-scrollbar bg-white dark:bg-[#1D2125]">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Full Name</label>
-                  <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] focus:bg-white dark:focus:bg-[#1D2125] focus:border-[#0052CC] outline-none transition-all" />
+            <form onSubmit={handleSubmit} className="p-6 lg:p-10 space-y-6 lg:space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</label>
+                  <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-5 py-3 lg:py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:border-indigo-500 outline-none" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Email Identifier</label>
-                  <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] focus:bg-white dark:focus:bg-[#1D2125] focus:border-[#0052CC] outline-none transition-all" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Identifier</label>
+                  <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-5 py-3 lg:py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:border-indigo-500 outline-none" />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Team Cluster</label>
-                  <select required value={formData.team_id} onChange={e => setFormData({...formData, team_id: e.target.value})} className="w-full px-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] outline-none focus:border-[#0052CC]">
-                    <option value="" className="dark:bg-[#1D2125]">Select Cluster</option>
-                    {teams.map(t => <option key={t.id} value={t.id} className="dark:bg-[#1D2125]">{t.name}</option>)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cluster</label>
+                  <select required value={formData.team_id} onChange={e => setFormData({...formData, team_id: e.target.value})} className="w-full px-5 py-3 lg:py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm outline-none">
+                    <option value="">Select Cluster</option>
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Expertise Rank</label>
-                  <select value={formData.experience_level} onChange={e => setFormData({...formData, experience_level: e.target.value as any})} className="w-full px-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] outline-none focus:border-[#0052CC]">
-                    {['Junior', 'Mid-Senior', 'Senior', 'Lead'].map(l => <option key={l} className="dark:bg-[#1D2125]">{l}</option>)}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expertise</label>
+                  <select value={formData.experience_level} onChange={e => setFormData({...formData, experience_level: e.target.value as any})} className="w-full px-5 py-3 lg:py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm outline-none">
+                    {['Junior', 'Mid-Senior', 'Senior', 'Lead'].map(l => <option key={l}>{l}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Temporal Zone</label>
-                  <div className="relative">
-                    <Globe size={14} className="absolute left-2.5 top-2.5 text-[#6B778C] dark:text-[#B3BAC5]" />
-                    <input value={formData.timezone} onChange={e => setFormData({...formData, timezone: e.target.value})} placeholder="e.g. UTC+5:30" className="w-full pl-9 pr-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] focus:bg-white dark:focus:bg-[#1D2125] focus:border-[#0052CC] outline-none transition-all" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Bandwidth (Hrs)</label>
-                  <div className="relative">
-                    <Clock size={14} className="absolute left-2.5 top-2.5 text-[#6B778C] dark:text-[#B3BAC5]" />
-                    <input type="number" value={formData.capacity_hours_per_week} onChange={e => setFormData({...formData, capacity_hours_per_week: parseInt(e.target.value)})} className="w-full pl-9 pr-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] focus:bg-white dark:focus:bg-[#1D2125] focus:border-[#0052CC] outline-none transition-all" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[11px] font-bold text-[#6B778C] dark:text-[#B3BAC5] uppercase tracking-wider">Skill Matrix</label>
-                <div className="flex space-x-2">
-                  <input value={skillInput} onChange={e => setSkillInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())} placeholder="Add skill (e.g. React, Docker)" className="flex-1 px-3 py-2 bg-[#F4F5F7] dark:bg-[#161B22] border border-[#DFE1E6] dark:border-[#333C4B] rounded text-sm text-[#172B4D] dark:text-[#E2E8F0] focus:bg-white dark:focus:bg-[#1D2125] focus:border-[#0052CC] outline-none transition-all" />
-                  <button type="button" onClick={addSkill} className="bg-[#172B4D] dark:bg-[#0052CC] text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest hover:bg-[#0052CC] dark:hover:bg-[#0747A6] transition-colors shadow-sm">Add</button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {formData.skill_sets?.map(skill => (
-                    <span key={skill} className="px-2.5 py-1 bg-[#DEEBFF] dark:bg-[#0747A6] text-[#0052CC] dark:text-white rounded-full text-[10px] font-bold flex items-center border border-[#B3D4FF] dark:border-[#333C4B] animate-in zoom-in-75">
-                      {skill}
-                      <button type="button" onClick={() => removeSkill(skill)} className="ml-1.5 hover:text-[#BF2600] dark:hover:text-[#FF8B8B] transition-colors"><X size={12} /></button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 pt-2">
-                <input type="checkbox" id="active-check" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} className="w-4 h-4 rounded border-[#DFE1E6] dark:border-[#333C4B] text-[#0052CC] focus:ring-[#0052CC]" />
-                <label htmlFor="active-check" className="text-xs font-bold text-[#172B4D] dark:text-[#E2E8F0] cursor-pointer">Associate is operational and available for allocation</label>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-6 border-t border-[#DFE1E6] dark:border-[#333C4B] sticky bottom-0 bg-white dark:bg-[#1D2125] transition-colors">
-                <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 text-[#42526E] dark:text-[#B3BAC5] font-bold text-sm hover:bg-[#F4F5F7] dark:hover:bg-[#333C4B] rounded transition-colors">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 bg-[#0052CC] text-white rounded font-bold text-sm hover:bg-[#0747A6] shadow-sm transition-all active:scale-[0.98] flex items-center space-x-2">
-                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
-                  <span>{isSubmitting ? 'Syncing...' : (editingMember ? 'Update Associate' : 'Onboard Associate')}</span>
+              <div className="flex justify-end space-x-4 lg:space-x-6 pt-6 lg:pt-8 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 lg:py-4 text-sm font-extrabold text-slate-400 hover:text-slate-600 uppercase tracking-widest">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="px-10 py-3 lg:py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl shadow-indigo-600/30 active:scale-95 flex items-center space-x-3">
+                  {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                  <span>Save Profile</span>
                 </button>
               </div>
             </form>
